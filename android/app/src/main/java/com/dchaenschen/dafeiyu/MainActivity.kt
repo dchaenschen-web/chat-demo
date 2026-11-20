@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.DownloadManager
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -50,7 +51,7 @@ class MainActivity : AppCompatActivity() {
       val clip = data.clipData
       val uris: Array<Uri> =
         if (clip != null) Array(clip.itemCount) { clip.getItemAt(it).uri }
-        else arrayOfNotNull(data.data)
+        else listOfNotNull(data.data).toTypedArray()
       callback.onReceiveValue(uris)
     }
 
@@ -157,7 +158,7 @@ class MainActivity : AppCompatActivity() {
         val name = URLUtil.guessFileName(url, contentDisposition, mimeType)
         request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, name)
         request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-        (getSystemService(DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
+        (getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
         Toast.makeText(this, "开始下载：$name", Toast.LENGTH_SHORT).show()
       } catch (e: Exception) {
         Toast.makeText(this, "下载失败：${e.message}", Toast.LENGTH_SHORT).show()
