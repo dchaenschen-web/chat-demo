@@ -10,6 +10,12 @@ export type ThemePreference = 'light' | 'dark' | 'system'
 /** 本机设置，存 localStorage：API Key、语言、主题、位置、朗读音色、深度思考与智能搜索开关、侧边栏收起状态 */
 type Settings = {
   apiKey: string | null
+  /** 自定义 API 基址；null 表示用构建期默认值（https://api.deepseek.com） */
+  apiOrigin: string | null
+  /** 局域网同步服务地址，例如 http://192.168.178.22:8765 */
+  syncEndpoint: string | null
+  /** 局域网同步服务令牌 */
+  syncToken: string | null
   locale: Locale
   themePreference: ThemePreference
   location: UserLocation | null
@@ -21,6 +27,9 @@ type Settings = {
 
 const KEYS = {
   apiKey: 'chat-demo:api-key',
+  apiOrigin: 'chat-demo:api-origin',
+  syncEndpoint: 'chat-demo:sync-endpoint',
+  syncToken: 'chat-demo:sync-token',
   locale: 'chat-demo:locale',
   location: 'chat-demo:location',
   themePreference: 'chat-demo:theme-preference',
@@ -89,6 +98,9 @@ const initialTtsVoice = (): TtsVoice => (read(KEYS.ttsVoice) === 'tide' ? 'tide'
 
 export const useSettings = create<Settings>(() => ({
   apiKey: read(KEYS.apiKey),
+  apiOrigin: read(KEYS.apiOrigin),
+  syncEndpoint: read(KEYS.syncEndpoint),
+  syncToken: read(KEYS.syncToken),
   locale: initialLocale(),
   location: initialLocation(),
   themePreference: initialThemePreference(),
@@ -122,6 +134,24 @@ export const setTtsVoice = (ttsVoice: TtsVoice) => {
 export const setApiKey = (apiKey: string | null) => {
   write(KEYS.apiKey, apiKey)
   useSettings.setState({ apiKey })
+}
+
+export const setApiOrigin = (apiOrigin: string | null) => {
+  const value = apiOrigin?.trim() ? apiOrigin.trim() : null
+  write(KEYS.apiOrigin, value)
+  useSettings.setState({ apiOrigin: value })
+}
+
+export const setSyncEndpoint = (syncEndpoint: string | null) => {
+  const value = syncEndpoint?.trim() ? syncEndpoint.trim() : null
+  write(KEYS.syncEndpoint, value)
+  useSettings.setState({ syncEndpoint: value })
+}
+
+export const setSyncToken = (syncToken: string | null) => {
+  const value = syncToken?.trim() ? syncToken.trim() : null
+  write(KEYS.syncToken, value)
+  useSettings.setState({ syncToken: value })
 }
 
 export const setThinking = (thinking: boolean) => {
