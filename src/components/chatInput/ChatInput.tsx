@@ -29,6 +29,7 @@ import { DragMask, useFileDrop } from './DragMask.js'
 import { showToast } from '../base/toastState.js'
 import { ACCEPT, useUploads } from '../../services/attachments.js'
 import { DraftAttachments } from './DraftAttachments.js'
+import { PeakBadge } from './PeakBadge.js'
 import { ReferencePicker } from './ReferencePicker.js'
 import { useVoiceInput } from './useVoiceInput.js'
 import { VoiceButton } from './VoiceButton.js'
@@ -201,6 +202,9 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
         <div className={styles.mirror} aria-hidden>
           {`${text}\n`}
         </div>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 2px 4px' }}>
+        <PeakBadge />
       </div>
       <div className={styles.functionRow}>
         {/* 深度思考 / 智能搜索开关，tooltip 在按钮上方 */}

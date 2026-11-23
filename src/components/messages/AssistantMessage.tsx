@@ -16,6 +16,7 @@ import { toggleSearchPanel, useSearchPanel } from '../search/searchPanelState.js
 import { ReadAloudButton } from './ReadAloudButton.js'
 import { CopyButton } from './CopyButton.js'
 import { ReplyArea } from './ReplyArea.js'
+import { UsageLine } from './UsageLine.js'
 import { useReplyView } from './useReplyView.js'
 import {
   BranchSwitcher,
@@ -137,6 +138,9 @@ export const AssistantMessage = memo(function AssistantMessage({
             )}
           </span>
         </div>
+      ) : null}
+      {!streaming && message.usage ? (
+        <UsageLine usage={message.usage} createdAt={message.createdAt} />
       ) : null}
       {streaming ? null : (
         <div className={styles.bottom}>

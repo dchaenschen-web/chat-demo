@@ -8,7 +8,22 @@ import {
   setSyncToken,
   useSettings,
 } from '../../services/settings.js'
-import styles from './Settings.module.css'
+
+/**
+ * 设置项里的纵向块。注意：不能复用 Settings.module.css 的 .cell/.row ——
+ * 那些类是按「横向一行 + 右侧动作」设计的，塞进纵向内容区会让高度被压扁、内容溢出压到下一项上。
+ */
+const block: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'stretch',
+  gap: 8,
+  padding: '14px 0',
+  borderTop: '1px solid var(--dsw-alias-border-l2-darkmode-thin, rgba(128,128,128,.2))',
+}
+
+const title: CSSProperties = { fontSize: 14, lineHeight: '22px' }
+const hint: CSSProperties = { fontSize: 12, lineHeight: '18px', opacity: 0.6 }
 
 const input: CSSProperties = {
   flex: '1 1 auto',
@@ -21,14 +36,12 @@ const input: CSSProperties = {
   color: 'inherit',
 }
 
-const field: CSSProperties = {
+const row: CSSProperties = {
   display: 'flex',
-  flexDirection: 'column',
   gap: 8,
-  flex: '1 1 260px',
+  flexWrap: 'wrap',
+  alignItems: 'center',
 }
-
-const actions: CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }
 
 /** 自定义 API 基址（换 provider / 中转站，不用重新打包） */
 export const ApiOriginSetting = () => {
@@ -43,11 +56,9 @@ export const ApiOriginSetting = () => {
   }
 
   return (
-    <div className={styles.cell} style={{ ...field, gap: 10 }}>
-      <div className={styles.label} style={{ flexBasis: '100%' }}>
-        API 地址
-      </div>
-      <div style={actions}>
+    <div style={block}>
+      <div style={title}>API 地址</div>
+      <div style={row}>
         <input
           style={input}
           value={value}
@@ -59,7 +70,7 @@ export const ApiOriginSetting = () => {
           恢复默认
         </Button>
       </div>
-      <div className={styles.description}>
+      <div style={hint}>
         {status ??
           '留空使用构建期默认值。只改基址，不校验连通性；填了中转站地址后请自己发一条消息验证。'}
       </div>
@@ -89,7 +100,10 @@ export const SyncSetting = () => {
         const result = await syncOnce(endpoint, token, (text) => setStatus({ text, error: false }))
         const summary = `拉取 ${result.pulled} · 上传 ${result.pushed} · 跳过 ${result.skipped}`
         if (result.errors.length > 0) {
-          setStatus({ text: `${summary}；失败 ${result.errors.length}：${result.errors[0]}`, error: true })
+          setStatus({
+            text: `${summary}；失败 ${result.errors.length}：${result.errors[0]}`,
+            error: true,
+          })
         } else {
           setStatus({ text: summary, error: false })
           if (result.pulled > 0) {
@@ -108,11 +122,9 @@ export const SyncSetting = () => {
   }
 
   return (
-    <div className={styles.cell} style={{ ...field, gap: 10 }}>
-      <div className={styles.label} style={{ flexBasis: '100%' }}>
-        电脑同步（局域网）
-      </div>
-      <div style={actions}>
+    <div style={block}>
+      <div style={title}>电脑同步（局域网）</div>
+      <div style={row}>
         <input
           style={input}
           value={endpoint ?? ''}
@@ -121,7 +133,7 @@ export const SyncSetting = () => {
           onChange={(event) => setSyncEndpoint(event.target.value)}
         />
       </div>
-      <div style={actions}>
+      <div style={row}>
         <input
           style={input}
           value={token ?? ''}
@@ -130,7 +142,7 @@ export const SyncSetting = () => {
           onChange={(event) => setSyncToken(event.target.value)}
         />
       </div>
-      <div style={actions}>
+      <div style={row}>
         <Button
           variant="outlined"
           size="m"
@@ -143,10 +155,7 @@ export const SyncSetting = () => {
           {busy === 'sync' ? '同步中…' : '立即同步'}
         </Button>
       </div>
-      <div
-        className={styles.description}
-        style={status?.error ? { color: 'var(--danger, #d92d20)' } : undefined}
-      >
+      <div style={status?.error ? { ...hint, color: 'var(--danger, #d92d20)' } : hint}>
         {status?.text ??
           '手机与电脑在同一 WiFi、电脑上已双击「启动同步服务.cmd」时可用。后写优先：同一会话两边都改会以较新一侧为准。'}
       </div>
