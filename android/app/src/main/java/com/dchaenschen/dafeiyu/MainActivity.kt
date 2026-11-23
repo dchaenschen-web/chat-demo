@@ -87,6 +87,10 @@ class MainActivity : AppCompatActivity() {
     }
     CookieManager.getInstance().setAcceptCookie(true)
 
+    // 页面源是 https://appassets.androidplatform.net，而局域网同步走 http://<PC>:8765。
+    // Android WebView 默认把「HTTPS 页面发 HTTP 请求」当混合内容直接拦掉，必须显式放开。
+    settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+
     val assetLoader =
       WebViewAssetLoader.Builder()
         .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))

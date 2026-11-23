@@ -112,8 +112,12 @@ export const SyncSetting = () => {
         }
       }
     } catch (error) {
+      const raw = error instanceof Error ? error.message : String(error)
+      const unreachable = /Failed to fetch|NetworkError|Load failed|network/i.test(raw)
       setStatus({
-        text: `失败：${error instanceof Error ? error.message : String(error)}`,
+        text: unreachable
+          ? '连不上。按顺序查：① 电脑上是否双击了「启动同步服务.cmd」并在运行 ② 手机与电脑是否同一 WiFi ③ 电脑防火墙是否放行 8765 ④ APK 需为最新版（已放开 HTTPS 页面访问 http 同步地址）'
+          : `失败：${raw}`,
         error: true,
       })
     } finally {

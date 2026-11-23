@@ -21,7 +21,17 @@ export type SyncResult = {
 
 export type PingResult = { ok: boolean; host: string; workspace: string; version: number }
 
-const normalize = (endpoint: string) => endpoint.trim().replace(/\/+$/, '')
+/**
+ * 规范化同步地址：去掉尾部斜杠；没写协议时补 http://
+ * （漏写协议会变成相对路径，在 https 页面下发请求直接 Failed to fetch）
+ */
+const normalize = (endpoint: string) => {
+  const trimmed = endpoint.trim().replace(/\/+$/, '')
+  if (!trimmed) {
+    return ''
+  }
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`
+}
 
 const headers = (token: string) => ({
   'Content-Type': 'application/json',
