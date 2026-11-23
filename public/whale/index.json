@@ -1,0 +1,29 @@
+{
+ "roles": {
+  "default": "roles/default.png",
+  "dsh2": "roles/dsh2.png",
+  "dsniang2": "roles/dsniang2.png"
+ },
+ "defaultRole": "default",
+ "bubbles": {
+  "bimg_mupm75x1_vadd8z": "bubbles/bimg_mupm75x1_vadd8z.png",
+  "bimg_mupmb6g0_b33ukf": "bubbles/bimg_mupmb6g0_b33ukf.png",
+  "bimg_mupmeh1p_ep9880": "bubbles/bimg_mupmeh1p_ep9880.png",
+  "bimg_muthmme5_6cpjkv": "bubbles/bimg_muthmme5_6cpjkv.png",
+  "bimg_mvfqgdaz_p7xqfq": "bubbles/bimg_mvfqgdaz_p7xqfq.png"
+ },
+ "audio": {},
+ "static": {
+  "rua": "rua.gif",
+  "D1": "audio/D1.mp3",
+  "D2": "audio/D2.mp3",
+  "Ya1": "audio/Ya1.mp3",
+  "Ya2": "audio/Ya2.mp3",
+  "task-end-a": "audio/task-end-a.wav",
+  "minecraft-exp-orb": "audio/minecraft-exp-orb.wav"
+ },
+ "seed": {
+  "bubble": "seed/bubble.json",
+  "size": "seed/size.json"
+ }
+}

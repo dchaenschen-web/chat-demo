@@ -63,8 +63,14 @@ const request = async <T>(
 export const pingSync = (endpoint: string, token: string): Promise<PingResult> =>
   request<PingResult>(endpoint, token, '/api/ping')
 
-const listRemote = (endpoint: string, token: string) =>
-  request<{ sessions: RemoteEntry[]; deleted: RemoteTombstone[] }>(endpoint, token, '/api/sessions')
+/** 兼容旧版服务端：v2 的 /api/sessions 没有 deleted 字段 */
+const listRemote = async (endpoint: string, token: string) => {
+  const data = await request<{
+    sessions?: RemoteEntry[]
+    deleted?: RemoteTombstone[]
+  }>(endpoint, token, '/api/sessions')
+  return { sessions: data.sessions ?? [], deleted: data.deleted ?? [] }
+}
 
 const pullSession = async (endpoint: string, token: string, id: string): Promise<void> => {
   const file = await request<SessionFile>(endpoint, token, `/api/sessions/${encodeURIComponent(id)}`)

@@ -82,7 +82,11 @@ export const createConfig = ({
     }),
     new rspack.DefinePlugin({ __API_ORIGIN__: JSON.stringify(apiOrigin) }),
     new rspack.CopyRspackPlugin({
-      patterns: [{ from: path.resolve(root, 'LICENSE'), to: 'LICENSE', toType: 'file' }],
+      patterns: [
+        { from: path.resolve(root, 'LICENSE'), to: 'LICENSE', toType: 'file' },
+        // 小鲸鱼挂件的资产与本地状态（scripts/vendor_whale.py 生成）
+        { from: path.resolve(root, 'public'), to: '.', noErrorOnMissing: true },
+      ],
     }),
   ],
   performance: { hints: false },

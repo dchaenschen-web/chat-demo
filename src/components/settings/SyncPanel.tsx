@@ -95,7 +95,12 @@ export const SyncSetting = () => {
     try {
       if (kind === 'ping') {
         const result = await pingSync(endpoint, token)
-        setStatus({ text: `已连接 ${result.host}（工作区 ${result.workspace}）`, error: false })
+        setStatus({
+          text:
+            `已连接 ${result.host}（工作区 ${result.workspace}，服务端 v${result.version}）` +
+            (result.version < 3 ? '　⚠ 旧版服务端不支持删除同步，请先「停止同步服务」再重新启动' : ''),
+          error: false,
+        })
       } else {
         const result = await syncOnce(endpoint, token, (text) => setStatus({ text, error: false }))
         const summary = `拉取 ${result.pulled} · 上传 ${result.pushed} · 删除 ${result.deleted} · 跳过 ${result.skipped}`
