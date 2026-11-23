@@ -11,6 +11,7 @@ import {
   useUploads,
 } from '../attachments.js'
 import { useSettings } from '../settings.js'
+import { queueDeletion } from '../sync/deletions.js'
 import { appendBranch, getVisibleMessages, normalizeSession, selectVersion } from './branches.js'
 import * as db from './db.js'
 import {
@@ -507,6 +508,8 @@ const removeSessionData = async (id: string): Promise<boolean> => {
       return false
     }
     await db.deleteSession(id)
+    // 记下待同步删除：下次连电脑同步时把这条删除推过去，避免被对方当成新会话推回来
+    queueDeletion(id)
     if (epoch !== historyEpoch) {
       return true
     }

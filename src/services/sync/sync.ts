@@ -1,7 +1,8 @@
 import type { SessionFile } from '../chat/history/format.js'
 import { toLocalSession } from '../chat/history/toLocal.js'
 import { toSessionFile } from '../chat/history/toArchive.js'
-import { loadSession, loadSessionSummaries, saveSession } from '../chat/db.js'
+import { deleteSession, loadSession, loadSessionSummaries, saveSession } from '../chat/db.js'
+import { clearPendingDeletion, listPendingDeletions } from './deletions.js'
 
 /** 远端会话列表项（与 ds_sync_server.py 的 /api/sessions 对齐） */
 export type RemoteEntry = {
@@ -12,10 +13,14 @@ export type RemoteEntry = {
   hash: string
 }
 
+/** 远端墓碑：对方删掉的会话，本地也要删，且不能再推回去 */
+export type RemoteTombstone = { id: string; deleted_at: number }
+
 export type SyncResult = {
   pulled: number
   pushed: number
   skipped: number
+  deleted: number
   errors: string[]
 }
 
@@ -58,19 +63,16 @@ const request = async <T>(
 export const pingSync = (endpoint: string, token: string): Promise<PingResult> =>
   request<PingResult>(endpoint, token, '/api/ping')
 
-const pullSession = async (endpoint: string, token: string, id: string): Promise<boolean> => {
+const listRemote = (endpoint: string, token: string) =>
+  request<{ sessions: RemoteEntry[]; deleted: RemoteTombstone[] }>(endpoint, token, '/api/sessions')
+
+const pullSession = async (endpoint: string, token: string, id: string): Promise<void> => {
   const file = await request<SessionFile>(endpoint, token, `/api/sessions/${encodeURIComponent(id)}`)
   const local = toLocalSession(file)
-  const existed = (await loadSessionSummaries()).some((summary) => summary.id === local.session.id)
   await saveSession(local.session)
-  return !existed
 }
 
-const pushSession = async (
-  endpoint: string,
-  token: string,
-  id: string
-): Promise<boolean> => {
+const pushSession = async (endpoint: string, token: string, id: string): Promise<boolean> => {
   const session = await loadSession(id)
   if (!session) {
     return false
@@ -83,22 +85,54 @@ const pushSession = async (
   return true
 }
 
+/** 把本地删掉的会话推给电脑（推成功才清队列，失败下次再试） */
+const pushDeletions = async (endpoint: string, token: string, result: SyncResult) => {
+  for (const id of listPendingDeletions()) {
+    try {
+      await request(endpoint, token, `/api/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' })
+      clearPendingDeletion(id)
+    } catch (error) {
+      result.errors.push(`删除 ${id}: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+}
+
 /**
- * 双向同步：按 updatedAt / updated_at 做后写优先。
- * 冲突（两边都改过）时本版策略是保留较新一侧，旧的一侧被覆盖；不会静默删除会话。
+ * 双向同步：
+ * - 先推本地删除，再应用远端墓碑（两边都不复活已删会话）；
+ * - 其余会话按 updatedAt / updated_at 后写优先；
+ * - 冲突（两边都改过）保留较新一侧，旧的一侧被覆盖。
  */
 export const syncOnce = async (
   endpoint: string,
   token: string,
   onProgress?: (text: string) => void
 ): Promise<SyncResult> => {
-  const result: SyncResult = { pulled: 0, pushed: 0, skipped: 0, errors: [] }
-  const [{ sessions: remote }, localSummaries] = await Promise.all([
-    request<{ sessions: RemoteEntry[] }>(endpoint, token, '/api/sessions'),
+  const result: SyncResult = { pulled: 0, pushed: 0, skipped: 0, deleted: 0, errors: [] }
+
+  onProgress?.('推送本地删除…')
+  await pushDeletions(endpoint, token, result)
+
+  const [{ sessions: remote, deleted }, localSummaries] = await Promise.all([
+    listRemote(endpoint, token),
     loadSessionSummaries(),
   ])
-  const remoteById = new Map(remote.map((item) => [item.id, item]))
-  const localById = new Map(localSummaries.map((item) => [item.id, item]))
+  const tombstoned = new Set(deleted.map((item) => item.id))
+
+  for (const id of tombstoned) {
+    if (localSummaries.some((summary) => summary.id === id)) {
+      onProgress?.(`删除 ${id.slice(0, 8)}`)
+      await deleteSession(id)
+      result.deleted += 1
+    }
+  }
+
+  const remoteById = new Map(
+    remote.filter((item) => !tombstoned.has(item.id)).map((item) => [item.id, item])
+  )
+  const localById = new Map(
+    localSummaries.filter((item) => !tombstoned.has(item.id)).map((item) => [item.id, item])
+  )
   const ids = new Set<string>([...remoteById.keys(), ...localById.keys()])
 
   for (const id of ids) {

@@ -98,7 +98,7 @@ export const SyncSetting = () => {
         setStatus({ text: `已连接 ${result.host}（工作区 ${result.workspace}）`, error: false })
       } else {
         const result = await syncOnce(endpoint, token, (text) => setStatus({ text, error: false }))
-        const summary = `拉取 ${result.pulled} · 上传 ${result.pushed} · 跳过 ${result.skipped}`
+        const summary = `拉取 ${result.pulled} · 上传 ${result.pushed} · 删除 ${result.deleted} · 跳过 ${result.skipped}`
         if (result.errors.length > 0) {
           setStatus({
             text: `${summary}；失败 ${result.errors.length}：${result.errors[0]}`,
@@ -106,7 +106,7 @@ export const SyncSetting = () => {
           })
         } else {
           setStatus({ text: summary, error: false })
-          if (result.pulled > 0) {
+          if (result.pulled > 0 || result.deleted > 0) {
             void initChat()
           }
         }
