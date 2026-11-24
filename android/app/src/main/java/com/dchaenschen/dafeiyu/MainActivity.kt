@@ -66,6 +66,9 @@ class MainActivity : AppCompatActivity() {
       }
     }
 
+  private val mediaPermissionLauncher =
+    registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
   private val notifyPermissionLauncher =
     registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
@@ -183,6 +186,12 @@ class MainActivity : AppCompatActivity() {
     )
 
     if (Build.VERSION.SDK_INT >= 33 &&
+        ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) !=
+          PackageManager.PERMISSION_GRANTED) {
+      mediaPermissionLauncher.launch(Manifest.permission.READ_MEDIA_IMAGES)
+    }
+
+    if (Build.VERSION.SDK_INT >= 33 &&
         ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
           PackageManager.PERMISSION_GRANTED) {
       notifyPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -193,6 +202,12 @@ class MainActivity : AppCompatActivity() {
     } else {
       webView.loadUrl("https://appassets.androidplatform.net/assets/index.html")
     }
+  }
+
+  override fun onResume() {
+    super.onResume()
+    // 回到前台时让 web 侧检查有没有新截图（截屏自动导入）
+    webView.post { webView.evaluateJavascript("window.__dafeiyuOnResume && window.__dafeiyuOnResume()", null) }
   }
 
   override fun onSaveInstanceState(outState: Bundle) {

@@ -31,6 +31,7 @@ import { ACCEPT, useUploads } from '../../services/attachments.js'
 import { DraftAttachments } from './DraftAttachments.js'
 import { PeakBadge } from './PeakBadge.js'
 import { ReferencePicker } from './ReferencePicker.js'
+import { ScreenshotImportHost } from '../screenshots/ScreenshotCropModal.js'
 import { useVoiceInput } from './useVoiceInput.js'
 import { VoiceButton } from './VoiceButton.js'
 import { Spectrum } from './Spectrum.js'
@@ -307,6 +308,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
           onPick={(block) => setText(text.trim() ? `${block}\n${text}` : block)}
         />
       ) : null}
+      <ScreenshotImportHost onAttach={(file) => acceptFiles([file])} />
       {dragging ? <DragMask /> : null}
     </div>
   )

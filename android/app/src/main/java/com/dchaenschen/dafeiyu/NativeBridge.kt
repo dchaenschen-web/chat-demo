@@ -32,6 +32,27 @@ class NativeBridge(private val activity: MainActivity) {
     }
   }
 
+  /** 返回新增截图的 JSON 数组（content:// URI 列表），前端逐个取 data URL 后裁剪。 */
+  @JavascriptInterface
+  fun fetchNewScreenshots(): String {
+    return try {
+      val list = ScreenshotWatcher.fetchNew(activity)
+      list.joinToString(prefix = "[", postfix = "]", separator = ",") { quote(it.toString()) }
+    } catch (_: Exception) {
+      "[]"
+    }
+  }
+
+  /** 读取截图内容为 data URL；失败返回空串。 */
+  @JavascriptInterface
+  fun readScreenshot(uri: String): String {
+    return try {
+      ScreenshotWatcher.toDataUrl(activity, android.net.Uri.parse(uri)) ?: ""
+    } catch (_: Exception) {
+      ""
+    }
+  }
+
   /** 返回 JSON 文本；失败时 ok=false。同步阻塞（JS 桥线程），超时 15s。 */
   @JavascriptInterface
   fun fetchBalance(apiKey: String): String {
