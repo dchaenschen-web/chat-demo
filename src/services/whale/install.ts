@@ -154,8 +154,22 @@ export const installWhale = async (): Promise<void> => {
         case '/dsh-whale/api-models.json':
           return json({ ok: true, models: [], templates: [] })
         case '/dsh-whale/balance':
-        case '/dsh-whale/balance.json':
-          return json({ ok: false, error: 'app 内未接入余额接口' })
+        case '/dsh-whale/balance.json': {
+          const native = (
+            window as unknown as { DaFeiYuNative?: { fetchBalance?: (key: string) => string } }
+          ).DaFeiYuNative
+          if (!native?.fetchBalance) {
+            return json({ ok: false, error: '余额需要原生壳（浏览器预览不支持）' })
+          }
+          try {
+            const apiKey =
+              (await import('../settings.js')).useSettings.getState().apiKey ?? ''
+            const parsed = JSON.parse(native.fetchBalance(apiKey)) as Record<string, unknown>
+            return json({ ok: parsed.ok !== false, ...parsed })
+          } catch (error) {
+            return json({ ok: false, error: String(error) })
+          }
+        }
         default:
           return json({ ok: false, error: 'not supported' })
       }

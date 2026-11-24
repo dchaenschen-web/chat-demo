@@ -66,6 +66,9 @@ class MainActivity : AppCompatActivity() {
       }
     }
 
+  private val notifyPermissionLauncher =
+    registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
   @SuppressLint("SetJavaScriptEnabled")
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -86,6 +89,7 @@ class MainActivity : AppCompatActivity() {
       settings.safeBrowsingEnabled = true
     }
     CookieManager.getInstance().setAcceptCookie(true)
+    webView.addJavascriptInterface(NativeBridge(this), "DaFeiYuNative")
 
     // 页面源是 https://appassets.androidplatform.net，而局域网同步走 http://<PC>:8765。
     // Android WebView 默认把「HTTPS 页面发 HTTP 请求」当混合内容直接拦掉，必须显式放开。
@@ -177,6 +181,12 @@ class MainActivity : AppCompatActivity() {
         }
       }
     )
+
+    if (Build.VERSION.SDK_INT >= 33 &&
+        ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+          PackageManager.PERMISSION_GRANTED) {
+      notifyPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
 
     if (savedInstanceState != null) {
       webView.restoreState(savedInstanceState)
