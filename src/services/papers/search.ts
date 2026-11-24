@@ -3,6 +3,8 @@
  * 不依赖电脑和任何 API Key；检索不到就按普通消息发送。
  */
 
+import { useSettings } from '../settings.js'
+
 export type Paper = {
   title: string
   authors: string[]
@@ -11,7 +13,7 @@ export type Paper = {
   url: string | null
   abstract: string | null
   citedBy: number | null
-  source: 'openalex' | 'crossref'
+  source: 'openalex' | 'crossref' | 'plugin'
 }
 
 const TIMEOUT_MS = 12_000
@@ -105,7 +107,7 @@ const fromCrossref = (work: CrossrefWork): Paper => {
 }
 
 /** 关键词检索真实文献；失败返回空数组（调用方按普通消息继续）。 */
-export const searchPapers = async (query: string, limit = 5): Promise<Paper[]> => {
+const searchPapersOnline = async (query: string, limit = 5): Promise<Paper[]> => {
   const text = query.trim().slice(0, 300)
   if (!text) {
     return []
@@ -150,4 +152,108 @@ export const buildPaperPoolBlock = (papers: Paper[]): string => {
     '规则：只允许引用上面文献池里的条目；需要引用时给出编号 + 标题 + DOI 链接。',
     '池子里没有的文献不要编造，也不要凭记忆补引用；不确定就明确说“文献池里没有相关条目”。',
   ].join('\n')
+}
+
+
+/** 把 harvester 的记录整成 Paper（字段名做了防御，兼容 records/relevant 两种） */
+const fromPlugin = (item: Record<string, unknown>): Paper | null => {
+  const title = String(item.title ?? item.paper_title ?? item.name ?? '').trim()
+  if (!title) {
+    return null
+  }
+  const authors = Array.isArray(item.authors)
+    ? (item.authors as unknown[]).map((value) => String(value)).filter(Boolean).slice(0, 6)
+    : item.author
+      ? [String(item.author)]
+      : []
+  const rawYear = item.year ?? item.published_year ?? item.pub_year
+  const year = Number.isFinite(Number(rawYear)) ? Number(rawYear) : null
+  const doi = item.doi ? String(item.doi) : null
+  const rawUrl = item.url ?? item.link ?? item.arxiv_url ?? item.abs_url ?? item.pdf_url
+  const url = rawUrl ? String(rawUrl) : doi ? `https://doi.org/${doi}` : null
+  return {
+    title,
+    authors,
+    year,
+    doi,
+    url,
+    abstract: item.abstract ? String(item.abstract).slice(0, 700) : null,
+    citedBy: null,
+    source: 'plugin',
+  }
+}
+
+const pluginStatusDone = (status: string) =>
+  ['done', 'completed', 'finished', 'success', 'ready'].includes(status)
+const pluginStatusFailed = (status: string) =>
+  ['error', 'failed', 'cancelled', 'canceled'].includes(status)
+
+/** 走电脑上的 paper harvester（经局域网同步服务转发）；不可用时返回 null。 */
+const searchPapersViaPlugin = async (
+  query: string,
+  limit: number
+): Promise<Paper[] | null> => {
+  const settings = useSettings.getState()
+  const endpoint = settings.syncEndpoint?.trim().replace(/\/+$/, '')
+  const token = settings.syncToken ?? ''
+  if (!endpoint || !token) {
+    return null
+  }
+  const headers = { 'Content-Type': 'application/json', 'X-Sync-Token': token }
+  const started = await fetch(`${endpoint}/api/papers/start`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ topic: query, summary_backend: 'auto' }),
+  })
+  if (!started.ok) {
+    return null
+  }
+  const taskId = ((await started.json()) as { task_id?: string; id?: string }).task_id
+  if (!taskId) {
+    return null
+  }
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+    const response = await fetch(
+      `${endpoint}/api/papers/status/${encodeURIComponent(taskId)}`,
+      { headers: { 'X-Sync-Token': token } }
+    )
+    if (!response.ok) {
+      continue
+    }
+    const task = (await response.json()) as {
+      status?: string
+      relevant?: Record<string, unknown>[]
+      records?: Record<string, unknown>[]
+    }
+    const status = String(task.status ?? '')
+    if (pluginStatusFailed(status)) {
+      return null
+    }
+    if (pluginStatusDone(status)) {
+      const pool = (task.relevant?.length ? task.relevant : task.records) ?? []
+      return pool
+        .map((item) => fromPlugin(item))
+        .filter((paper): paper is Paper => paper !== null)
+        .slice(0, limit)
+    }
+  }
+  return null
+}
+
+/** 文献检索：优先电脑上的插件（按提示词现查 + 本地模型筛选），不可用时退回 OpenAlex。 */
+export const searchPapers = async (query: string, limit = 8): Promise<Paper[]> => {
+  const text = query.trim().slice(0, 300)
+  if (!text) {
+    return []
+  }
+  try {
+    const viaPlugin = await searchPapersViaPlugin(text, limit)
+    if (viaPlugin && viaPlugin.length > 0) {
+      return viaPlugin
+    }
+  } catch {
+    // 插件不可用，退回在线检索
+  }
+  return searchPapersOnline(text, limit)
 }
