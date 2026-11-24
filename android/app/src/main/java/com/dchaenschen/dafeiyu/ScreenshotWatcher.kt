@@ -74,10 +74,15 @@ object ScreenshotWatcher {
   }
 
   /** 把 content URI 读成 data URL（一次截屏一般 1~5 MB，base64 可接受）。 */
-  fun toDataUrl(context: Context, uri: Uri): String? = try {
-    val type = context.contentResolver.getType(uri) ?: "image/png"
-    val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return null
-    "data:$type;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
+  fun toDataUrl(context: Context, uri: Uri): String? {
+    return try {
+      val type = context.contentResolver.getType(uri) ?: "image/png"
+      val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+        ?: return null
+      "data:$type;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
+    } catch (_: Exception) {
+      null
+    }
   } catch (_: Exception) {
     null
   }
