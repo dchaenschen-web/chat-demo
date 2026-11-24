@@ -1,6 +1,7 @@
 import clsx from 'clsx'
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
+  IconBrowseOutline16,
   IconGlobeLanguageOutline14,
   IconLinkOutline16,
   IconPaperclipOutline16,
@@ -8,7 +9,8 @@ import {
   IconStopFill16,
   IconThinkOutline14,
 } from '../base/icons.js'
-import { setSearch, setThinking, useSettings } from '../../services/settings.js'
+import { setPapers, setSearch, setThinking, useSettings } from '../../services/settings.js'
+import { buildPaperPoolBlock, searchPapers } from '../../services/papers/search.js'
 import { useIsMobile } from '../../app/viewport.js'
 import { sendMessage, stopReply, useChatStore } from '../../services/chat/store.js'
 import {
@@ -57,6 +59,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   const importingHistory = useChatStore((state) => state.importingHistory)
   const isMobile = useIsMobile()
   const search = useSettings((state) => state.search)
+  const papers = useSettings((state) => state.papers)
   const [referenceOpen, setReferenceOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -137,7 +140,7 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
   // 排队、上传中或上传失败的附件都留在输入框，全部上传成功后才能发送
   const canSend = !importingHistory && !streaming && voice.status === 'idle' && draftReady
 
-  const send = () => {
+  const sendNow = () => {
     if (
       useChatStore.getState().importingHistory ||
       voice.status !== 'idle' ||
@@ -155,6 +158,29 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
     } else {
       textareaRef.current?.focus()
     }
+  }
+
+  const send = () => {
+    if (!useSettings.getState().papers) {
+      sendNow()
+      return
+    }
+    const text = getDraft(sessionId).text.trim()
+    if (!text) {
+      sendNow()
+      return
+    }
+    showToast('检索文献…')
+    void searchPapers(text)
+      .then((papers) => {
+        if (papers.length > 0) {
+          setDraftText(sessionId, `${getDraft(sessionId).text}\n\n${buildPaperPoolBlock(papers)}`)
+        } else {
+          showToast('没检索到相关文献，按普通消息发送')
+        }
+      })
+      .catch(() => showToast('文献检索失败，按普通消息发送'))
+      .finally(() => sendNow())
   }
 
   return (
@@ -232,6 +258,18 @@ const Input = ({ sessionId }: { sessionId: string | null }) => {
             >
               <IconGlobeLanguageOutline14 />
               <span className={styles.toggleLabel}>{t('search')}</span>
+            </button>
+          </Tooltip>
+          <Tooltip content="先检索真实文献，只准引用检索结果">
+            <button
+              type="button"
+              className={clsx(styles.toggle, papers && styles.selected)}
+              aria-label="文献检索"
+              aria-pressed={papers}
+              onClick={() => setPapers(!papers)}
+            >
+              <IconBrowseOutline16 />
+              <span className={styles.toggleLabel}>文献</span>
             </button>
           </Tooltip>
         </div>

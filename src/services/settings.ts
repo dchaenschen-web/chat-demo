@@ -22,6 +22,8 @@ type Settings = {
   ttsVoice: TtsVoice
   thinking: boolean
   search: boolean
+  /** 发送前先检索真实文献，只允许引用检索结果 */
+  papers: boolean
   siderCollapsed: boolean
 }
 
@@ -36,6 +38,7 @@ const KEYS = {
   ttsVoice: 'chat-demo:tts-voice',
   thinking: 'chat-demo:thinking',
   search: 'chat-demo:search',
+  papers: 'chat-demo:papers',
   siderCollapsed: 'chat-demo:sider-collapsed',
 } as const
 
@@ -107,6 +110,7 @@ export const useSettings = create<Settings>(() => ({
   ttsVoice: initialTtsVoice(),
   thinking: read(KEYS.thinking) === 'true',
   search: read(KEYS.search) === 'true',
+  papers: read(KEYS.papers) === 'true',
   siderCollapsed: read(KEYS.siderCollapsed) === 'true',
 }))
 
@@ -157,6 +161,11 @@ export const setSyncToken = (syncToken: string | null) => {
 export const setThinking = (thinking: boolean) => {
   write(KEYS.thinking, String(thinking))
   useSettings.setState({ thinking })
+}
+
+export const setPapers = (papers: boolean) => {
+  write(KEYS.papers, String(papers))
+  useSettings.setState({ papers })
 }
 
 export const setSearch = (search: boolean) => {
