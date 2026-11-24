@@ -75,7 +75,18 @@ jobs:
 
       - name: Build release APK
         working-directory: android
-        run: gradle :app:assembleRelease --no-daemon --stacktrace
+        run: |
+          set -o pipefail
+          gradle :app:assembleRelease --no-daemon --stacktrace 2>&1 | tee gradle.log
+
+      - name: Report Gradle failure
+        if: failure()
+        working-directory: android
+        run: |
+          if [ -f gradle.log ]; then
+            SUMMARY=$(grep -m6 -E '^e: |^error:|What went wrong' -A2 gradle.log | head -24 | tr '\n' ' ' | tr -d '\r')
+            echo "::error title=Gradle failure::${SUMMARY}"
+          fi
 
       - name: Verify APK signature
         shell: bash
