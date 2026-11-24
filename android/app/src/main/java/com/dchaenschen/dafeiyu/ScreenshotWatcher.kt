@@ -83,7 +83,5 @@ object ScreenshotWatcher {
     } catch (_: Exception) {
       null
     }
-  } catch (_: Exception) {
-    null
   }
 }
